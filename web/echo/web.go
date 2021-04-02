@@ -2,20 +2,16 @@ package echo
 
 import (
 	"fmt"
-	"information-collector/cmd/api-server/web/middlewares"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 )
 
-var defaultMiddleware = []echo.MiddlewareFunc{
-	middlewares.TransFormContext,
-}
-
 type WebServer struct {
 	routeGroups []*RouteGroups
 	server      *echo.Echo
 	listenPort  string
+	middlewares []echo.MiddlewareFunc
 }
 
 // NewServer - new a echo server
@@ -40,9 +36,7 @@ func (s *WebServer) WithListenPort(listenPort string) *WebServer {
 
 // WithRouteGroups - set routeGroups for echo server
 func (s *WebServer) WithRouteGroups(routeGroups []*RouteGroups) *WebServer {
-	for _, routeGroup := range routeGroups {
-		s.routeGroups = append(s.routeGroups, routeGroup)
-	}
+	s.routeGroups = append(s.routeGroups, routeGroups...)
 	return s
 }
 
@@ -68,6 +62,11 @@ func (s *WebServer) Close() error {
 	return s.server.Close()
 }
 
+func (s *WebServer) WithMiddleware(middlewares []echo.MiddlewareFunc) *WebServer {
+	s.middlewares = middlewares
+	return s
+}
+
 // Initial - initial echo server
 func (s *WebServer) Initial() error {
 
@@ -75,7 +74,7 @@ func (s *WebServer) Initial() error {
 	for _, routeGroup := range s.routeGroups {
 		group := s.server.Group(routeGroup.Prefix)
 
-		group.Use(defaultMiddleware...)
+		group.Use(s.middlewares...)
 		group.Use(routeGroup.Mideleware...)
 
 		fmt.Printf("Route Group: %s \n", routeGroup.Prefix)
